@@ -10,10 +10,9 @@
 
 namespace tasks {
     const std::string binaryTaskFile = "tasks.dat";
-    const std::string indexofTaskFile = "tasks_index.dat";
+    const std::string indexTaskFile = "tasks_index.dat";
     int Task::lastId = 0;
 
-    // Function to convert status enum to string
     std::string statusToString(enum status s) {
         switch (s) {
             case status::TODO:
@@ -26,7 +25,6 @@ namespace tasks {
                 return "Unknown";
         }
     }
-    // Function to convert status enum to string
     std::string priorityToString(enum priority p) {
         switch (p) {
             case priority::LOW:
@@ -50,9 +48,9 @@ namespace tasks {
         static bool headersPrinted = false;
 
         if (!headersPrinted) {
-            os << "+----+------------------+-------------------------+-----------------------------+--------+-----------------+"
+            os << "+----+------------------+---------------------------+-----------------------------+--------+-----------------+"
                << "\n| #  |       TITLE      | DESCRIPTION           | PRIORITY | STATUS | DUE DATE | CREATION DATE             "
-               << "\n+----+------------------+-----------------------+-----------------------------+---------+----------------";
+               << "\n+----+------------------+----------------------------+-----------------------------+---------+----------------";
             headersPrinted = true;
         }
 
@@ -73,26 +71,26 @@ namespace tasks {
     void Task::createTask(std::string title, std::string description, enum priority priority, std::string due_date) {
         // Use 'this' to refer to the current instance
         *this = Task(std::move(title), std::move(description), priority, std::move(due_date));
-try {
-    // Open the index file for reading and writing
-    std::fstream indexFile(indexofTaskFile, std::ios::binary | std::ios::in | std::ios::out | std::ios::ate);
+
+    std::fstream indexFile(indexTaskFile, std::ios::binary | std::ios::in | std::ios::out | std::ios::ate);
 
     if (indexFile.is_open()) {
         // Get the current position in the main data file (tasks.dat)
         std::streampos position = indexFile.tellg();
 
-        // Open the main data file for writing in binary mode
         std::ofstream dataFile(binaryTaskFile, std::ios::binary | std::ios::app);
 
         if (dataFile.is_open()) {
+            try {
             // Serialize and write the new task to the main data file
             cereal::BinaryOutputArchive archive(dataFile);
             archive(*this);
 
             // Update the index file with the position of the new task
             indexFile.write(reinterpret_cast<const char *>(&position), sizeof(std::streampos));
-
-            // Close the files
+        } catch (const std::exception& e) {
+            std::cerr << "Exception caught: " << e.what() << '\n';
+        }
             dataFile.close();
             indexFile.close();
         } else {
@@ -102,50 +100,52 @@ try {
     } else {
         std::cerr << "Error: Unable to open the index file for reading and writing.\n";
     }
-}catch (const std::string& e){
-    // catch and handle the exception
-    std::cout << "String exception raised!" << '\n';
-    std::cout << "The exception has a value of: " << e << '\n';
-}
-    }
 
+    }
 
     void Task::getTask(const std::string &title) {
         std::vector<Task> tasks;
-        // Implementation to get a task by title
-        // Open the file for writing
-        std::ifstream outFile(binaryTaskFile);
-        // Check if the file is open
-        if (outFile.is_open()) {
-            // Create a stringstream to store deserialized data
-            std::stringstream iss;
-            // Read the file content into the stringstream
-            iss << outFile.rdbuf();
-            // Deserialize the tasks
-            {
-                cereal::BinaryInputArchive  archive(iss);
-                while (true) {
-                    try {
-                        Task task;
-                        archive(task);
-//                        if(task.title == title) {
-                            tasks.push_back(task);
-//                        }
-                    } catch (const cereal::Exception &e) {
-                        // Break the loop if there's nothing more to read
-                        break;
+
+            std::ifstream outFile(binaryTaskFile);
+            if (outFile.peek() == std::ifstream::traits_type::eof()) {
+                std::cerr << "Sorry: You have no tasks.\n";
+                return;
+            }
+            if (outFile.is_open()) {
+                try {
+                // Create a stringstream to store deserialized data
+                std::stringstream iss;
+                // Read the file content into the stringstream
+                iss << outFile.rdbuf();
+                // Deserialize the tasks
+                {
+                    cereal::BinaryInputArchive archive(iss);
+                    while (true) {
+                        try {
+                            Task task;
+                            archive(task);
+                            if (task.title == title) {
+                                tasks.push_back(task);
+                            }
+                        } catch (const cereal::Exception &e) {
+                            // Break the loop if there's nothing more to read
+                            break;
+                        }
                     }
                 }
+            } catch (const cereal::Exception &exception){
+                std::cerr << "Exception: " << exception.what() << "\n";
             }
-            // Close the file
-            outFile.close();
-        }else {
-            std::cerr << "Error: Unable to open the file for loading tasks.\n";
-        }
+                // Close the file
+                outFile.close();
+            } else {
+                std::cerr << "Error: Unable to open the file for loading tasks.\n";
+            }
 
-         for(const auto &el: tasks){
-             std::cout<<el<<std::endl;
-         }
+            for (const auto &el: tasks) {
+                std::cout << el << std::endl;
+            }
+
     }
 
     void Task::updateTask(const std::string &title) {

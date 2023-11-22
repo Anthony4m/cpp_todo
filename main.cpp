@@ -9,6 +9,6 @@ int main() {
 //    myTask.createTask("School Task", "This is a sample task", priority::HIGH, "2023-12-31");
 //    myTask.createTask("Work Task", "This is a sample task", priority::HIGH, "2023-12-31");
 //    myTask.createTask("Home Task", "This is a sample task", priority::HIGH, "2023-12-31");
-    myTask.getTask("School Task");
+    myTask.getTask("Home Task");
     return 0;
 }
