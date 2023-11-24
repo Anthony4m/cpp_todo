@@ -10,4 +10,5 @@ add_executable(
         tasks
         task.cpp
         main.cpp
+        taskIndex.cpp
 )

@@ -9,6 +9,10 @@ int main() {
 //    myTask.createTask("School Task", "This is a sample task", priority::HIGH, "2023-12-31");
 //    myTask.createTask("Work Task", "This is a sample task", priority::HIGH, "2023-12-31");
 //    myTask.createTask("Home Task", "This is a sample task", priority::HIGH, "2023-12-31");
-    myTask.getTask("School Task");
+    myTask.getTask(2);
+    myTask.updateTaskStatus(2,status::IN_PROGRESS);
+    myTask.updateTaskPriority(2,priority::LOW);
+    myTask.getTask(2);
+//    myTask.deleteTask(2);
     return 0;
 }
