@@ -47,8 +47,9 @@ namespace tasks {
         friend std::ostream& operator<<(std::ostream& os, const Task& task);
         void updateIndex();
         void createTask(std::string title, std::string description, enum priority priority, std::string due_date);
-        void getTask(const int taskid);
-        void updateTask(const std::string &title);
-        void deleteTask(std::string title);
+        void getTask(int taskId);
+        void updateTaskStatus(int taskId,enum status newStatus);
+        void updateTaskPriority(int taskId,enum priority newPriority);
+        static void deleteTask(int taskId);
     };
 } // namespace tasks

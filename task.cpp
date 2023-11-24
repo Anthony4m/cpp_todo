@@ -78,9 +78,8 @@ namespace tasks {
             index.saveTaskIndex(const_cast<std::string &>(tasksIndexFile));
         }
 
-
-
     }
+
     void Task::createTask(std::string title, std::string description, enum priority priority, std::string due_date) {
         // Use 'this' to refer to the current instance
         *this = Task(std::move(title), std::move(description), priority, std::move(due_date));
@@ -97,7 +96,6 @@ namespace tasks {
                 std::ofstream dataFile(binaryTaskFile, std::ios::binary | std::ios::app);
 
                 if (dataFile.is_open()) {
-                    // Serialize and write the new task to the main data file
                     cereal::BinaryOutputArchive archive(dataFile);
                     archive(*this);
 
@@ -126,9 +124,7 @@ namespace tasks {
 
 
     void Task::getTask(const int taskId) {
-        std::vector<Task> tasks;
 
-        // Create a TaskIndex object
         TaskIndex index;
         // Load the index from the file
         index.loadTaskIndex(const_cast<std::string &>(tasksIndexFile));
@@ -136,23 +132,24 @@ namespace tasks {
         // Check if the task with the given title exists in the index
         auto it = index.indexMap.find(taskId);
         if (it != index.indexMap.end()) {
-            // Open the main data file for reading
+
             std::ifstream dataFile(binaryTaskFile, std::ios::binary);
 
             if (dataFile.is_open()) {
-                // Set the file position to the stored position in the index
-                dataFile.seekg(it->second);
+                try {
+                    // Set the file position to the stored position in the index
+                    dataFile.seekg(it->second);
 
-                // Deserialize the task
-                cereal::BinaryInputArchive archive(dataFile);
-                Task task;
-                archive(task);
+                    // Deserialize the task
+                    cereal::BinaryInputArchive archive(dataFile);
+                    Task task;
+                    archive(task);
 
-                // Close the file
-                dataFile.close();
-
-                // Print or process the retrieved task
-                std::cout << task << std::endl;
+                    dataFile.close();
+                    std::cout << task << std::endl;
+                }catch (cereal::Exception exception){
+                    std::cout<<exception.what();
+                }
             } else {
                 std::cerr << "Error: Unable to open the data file for loading tasks.\n";
             }
@@ -162,13 +159,118 @@ namespace tasks {
     }
 
 
-    void Task::updateTask(const std::string &title) {
-        // Implementation to update a task by title
+    void Task::updateTaskStatus(int taskId, enum status newStatus) {
+        TaskIndex index;
+        index.loadTaskIndex(const_cast<std::string &>(tasksIndexFile));
+        // Check if the task with the given title exists in the index
+        auto it = index.indexMap.find(taskId);
+
+        if (it != index.indexMap.end()) {
+            // Open the main data file for reading and writing
+            std::fstream dataFile(binaryTaskFile, std::ios::binary | std::ios::in | std::ios::out);
+
+            if (dataFile.is_open()) {
+                // Set the file position to the stored position in the index
+                dataFile.seekp(it->second);
+                // Deserialize the task
+                cereal::BinaryInputArchive archive(dataFile);
+                Task task;
+                archive(task);
+                // Update the task status
+                task.status = newStatus;
+
+                // Set the file position for writing
+                dataFile.seekp(it->second);
+
+                // Serialize and write the updated task
+                cereal::BinaryOutputArchive archived(dataFile);
+                archived(task);
+
+                // Close the file
+                dataFile.close();
+            }
+        }
+    }
+    void Task::updateTaskPriority(int taskId,enum priority newPriority) {
+        TaskIndex index;
+        index.loadTaskIndex(const_cast<std::string &>(tasksIndexFile));
+        auto it = index.indexMap.find(taskId);
+
+        if (it != index.indexMap.end()) {
+            std::fstream dataFile(binaryTaskFile, std::ios::binary | std::ios::in | std::ios::out);
+
+            if (dataFile.is_open()) {
+                dataFile.seekp(it->second);
+                // Deserialize the task
+                cereal::BinaryInputArchive archive(dataFile);
+                Task task;
+                archive(task);
+                // Update the task priority
+                task.priority = newPriority;
+
+                dataFile.seekp(it->second);
+
+                // Serialize and write the updated task
+                cereal::BinaryOutputArchive archived(dataFile);
+                archived(task);
+
+                // Close the file
+                dataFile.close();
+            }
+        }
     }
 
-    void Task::deleteTask(std::string title) {
-        // Implementation to delete a task by title
-    }
 
+    void Task::deleteTask(int taskId) {
+        TaskIndex index;
+        index.loadTaskIndex(const_cast<std::string &>(tasksIndexFile));
+
+        auto it = index.indexMap.find(taskId);
+        if (it != index.indexMap.end()) {
+            std::fstream dataFile(binaryTaskFile, std::ios::binary | std::ios::in | std::ios::out);
+
+            if (dataFile.is_open()) {
+                std::ofstream tempfile("temp.dat", std::ios::binary);
+
+                if (tempfile.is_open()) {
+                    while (!dataFile.eof()) {
+                        std::streampos currentPosition = dataFile.tellg();
+
+                        Task task;
+                        try {
+                            cereal::BinaryInputArchive archive(dataFile);
+                            archive(task);
+                        } catch (const cereal::Exception& exception) {
+                            std::cerr << exception.what();
+                            break;
+                        }
+
+                        if (task.id != taskId) {
+                            tempfile.seekp(currentPosition);
+                            cereal::BinaryOutputArchive tempArchive(tempfile);
+                            tempArchive(task);
+                        }
+                    }
+
+                    dataFile.close();
+                    tempfile.close();
+
+                    std::remove(binaryTaskFile.c_str());
+                    std::rename("temp.dat", binaryTaskFile.c_str());
+
+                    index.removeIndex(const_cast<std::string &>(tasksIndexFile), taskId);
+                    index.saveTaskIndex(const_cast<std::string &>(tasksIndexFile));
+
+                    std::cout << "Task with ID " << taskId << " has been deleted.\n";
+                } else {
+                    std::cerr << "Error: Unable to open the temporary file.\n";
+                }
+            } else {
+                std::cerr << "Error: Unable to open the data file for deleting tasks.\n";
+            }
+        } else {
+            std::cerr << "Error: Task with ID " << taskId << " not found.\n";
+        }
+    }
 
 } // namespace tasks
