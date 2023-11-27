@@ -51,5 +51,6 @@ namespace tasks {
         void updateTaskStatus(int taskId,enum status newStatus);
         void updateTaskPriority(int taskId,enum priority newPriority);
         static void deleteTask(int taskId);
+        void listTasks();
     };
 } // namespace tasks

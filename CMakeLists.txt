@@ -11,4 +11,5 @@ add_executable(
         task.cpp
         main.cpp
         taskIndex.cpp
+        repl.cpp
 )
