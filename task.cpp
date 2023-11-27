@@ -80,7 +80,7 @@ namespace tasks {
 
     }
 
-    void Task::createTask(std::string title, std::string description, enum priority priority, std::string due_date) {
+    void Task::createTask(std::string title, std::string description, enum priority, std::string due_date) {
         // Use 'this' to refer to the current instance
         *this = Task(std::move(title), std::move(description), priority, std::move(due_date));
 
@@ -108,6 +108,7 @@ namespace tasks {
 
                     // Update the index with the current task position
                     updateIndex();
+                    std::cout<<"Task created\n";
                 } else {
                     std::cerr << "Error: Unable to open the data file for saving tasks.\n";
                     indexFile.close();
@@ -216,6 +217,7 @@ namespace tasks {
 
                 // Close the file
                 dataFile.close();
+                std::cout<<"Task updated\n";
             }
         }
     }
@@ -272,5 +274,38 @@ namespace tasks {
             std::cerr << "Error: Task with ID " << taskId << " not found.\n";
         }
     }
+
+    void Task::listTasks() {
+        std::vector<Task> tasks;
+
+        std::ifstream outFile(binaryTaskFile);
+        if (outFile.is_open()) {
+
+            std::stringstream iss;
+            iss << outFile.rdbuf();
+            {
+                cereal::BinaryInputArchive  archive(iss);
+                while (true) {
+                    try {
+                        Task task;
+                        archive(task);
+                        tasks.push_back(task);
+                    } catch (const cereal::Exception &e) {
+                        // Break the loop if there's nothing more to read
+                        break;
+                    }
+                }
+            }
+            // Close the file
+            outFile.close();
+        }else {
+            std::cerr << "Error: Unable to open the file for loading tasks.\n";
+        }
+
+        for(const auto &el: tasks){
+            std::cout<<el<<std::endl;
+        }
+        }
+
 
 } // namespace tasks
